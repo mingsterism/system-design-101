@@ -9,17 +9,38 @@ describe('MenuOrderManager', () => {
     let localStorage;
     let manager: MenuOrderManager;
 
+
     const mockMenuItem: MenuItem = {
-        id: '1',
-        name: 'Pizza',
-        price: 10
+        id: 'menu1',
+        name: 'Margherita Pizza',
+        description: 'Classic Italian pizza with tomato and mozzarella',
+        price: 15.99,
+        category: 'Pizza',
+        subcategory: null,
+        image: null,
+        allergens: ['dairy', 'gluten'],
+        nutritionalInfo: null,
+        preparationTime: 20,
+        isAvailable: true,
+        isSpecial: false,
+        customizationOptions: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
     };
 
     const mockOrderItem: OrderItem = {
         id: '1',
         menuItemId: '1',
         quantity: 1,
-        price: 10
+        price: 10,
+        status: 'new',
+        customizations: undefined,
+        specialInstructions: null,
+        orderId: '',
+        preparedBy: null,
+        servedBy: null,
+        preparedAt: null,
+        servedAt: null
     };
 
     beforeEach(() => {
