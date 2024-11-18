@@ -293,12 +293,18 @@ export class MenuPageManager {
             this.groupOrderService.getGroupOrderItems(this.groupOrder.id)
         ]);
 
+        const personalTotal = this.calculateTotal(personalItems);
+        const groupTotal = this.calculateTotal(groupItems);
+        const tax = 0; // Add appropriate tax calculation here
+
         return {
             personalItems,
             groupItems,
-            totalAmount: this.calculateTotal(personalItems),
-            groupTotalAmount: this.calculateTotal(groupItems),
-            tax: 0 // Add appropriate tax calculation here
+            totalAmount: personalTotal,
+            groupTotalAmount: groupTotal,
+            tax,
+            subtotal: personalTotal + groupTotal,
+            total: personalTotal + groupTotal + tax
         };
     }
 
@@ -323,7 +329,7 @@ export class MenuPageManager {
         let total = params.baseItem.price;
 
         // Calculate customization prices
-        if (params.baseItem.customizationOptions) {
+        if (Array.isArray(params.baseItem.customizationOptions)) {
             for (const option of params.baseItem.customizationOptions) {
                 const selections = params.customizations[option.id] || [];
                 for (const selection of selections) {
@@ -336,16 +342,12 @@ export class MenuPageManager {
         return total;
     }
 
-
-
     async validateOrder(params: {
         items: CartItem[];
         pickupTime?: string;
     }): Promise<OrderValidation> {
         const validation = await this.orderService.validateOrder({
             type: this.orderType,
-            items: params.items,
-            pickupTime: params.pickupTime
         });
 
         // Additional validation based on order type

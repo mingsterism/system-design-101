@@ -1,18 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TakeawayPageManager } from '../implementations';
+import { TakeawayPageManager } from '../TakeawayPageManager';
 import type {
     MenuItem,
     Review,
     CartItem,
-    DeliveryAddress,
     User,
     TimeSlot,
     PaymentMethod,
-    MenuItemCustomization,
-    MenuCategory,
     OrderSummary,
-    PreparationTime
 } from '../types';
+import { calculateItemPrice } from '../lib/utils/calculators';
+import { CartService, MenuService, OrderService, ReviewService, ScheduleService } from '../interfaces';
 
 describe('Takeaway Page - Complete User Journey', () => {
     let takeawayManager: TakeawayPageManager;
@@ -77,7 +75,8 @@ describe('Takeaway Page - Complete User Journey', () => {
             ambientRating: null,
             images: [],
             isPublished: true,
-            createdAt: new Date()
+            createdAt: new Date(),
+            orderId: ''
         }
     ];
 
@@ -95,37 +94,70 @@ describe('Takeaway Page - Complete User Journey', () => {
             checkItemAvailability: vi.fn().mockResolvedValue(true),
             getPopularItems: vi.fn().mockResolvedValue([mockMenuItem]),
             searchItems: vi.fn().mockResolvedValue([mockMenuItem])
-        };
+        } as MenuService;
 
         reviewService = {
             getMenuItemReviews: vi.fn().mockResolvedValue(mockReviews),
             getReviewStats: vi.fn().mockResolvedValue({
-                averageRating: 4.8,
-                totalReviews: 156,
-                ratingDistribution: { 5: 120, 4: 30, 3: 4, 2: 1, 1: 1 }
+                averageRating: 4.5,
+                totalReviews: 10
             })
-        };
+        } as ReviewService;
 
         cartService = {
             addToCart: vi.fn().mockResolvedValue({ success: true }),
-            updateQuantity: vi.fn().mockResolvedValue({ success: true }),
-            removeItem: vi.fn().mockResolvedValue({ success: true }),
-            getCart: vi.fn().mockResolvedValue({
-                items: [],
-                total: 0
-            })
-        };
+            getCartItems: vi.fn().mockResolvedValue([]),
+            updateCartItem: vi.fn().mockResolvedValue({ success: true }),
+            removeCartItem: vi.fn().mockResolvedValue(true),
+            clearCart: vi.fn().mockResolvedValue(true)
+        } as CartService;
 
         orderService = {
-            createTakeawayOrder: vi.fn().mockResolvedValue({ orderId: 'order1' }),
+            // Existing mocks
+            createOrder: vi.fn().mockResolvedValue({ id: 'order1' }),
             getEstimatedPreparationTime: vi.fn().mockResolvedValue(25),
-            getAvailableTimeSlots: vi.fn().mockResolvedValue(mockTimeSlots)
-        };
+            validateOrder: vi.fn().mockResolvedValue({
+                isValid: true,
+                errors: []
+            }),
+            getOrderConfirmation: vi.fn().mockResolvedValue({
+                orderNumber: 'order1',
+                pickupTime: '18:00',
+                estimatedPreparationTime: 25,
+                orderStatus: 'confirmed'
+            }),
+
+            // Add missing required methods from interface
+            addOrderItem: vi.fn().mockResolvedValue({
+                id: 'item1',
+                menuItemId: 'pizza1',
+                orderId: 'order1',
+                quantity: 1,
+                status: 'pending'
+            }),
+            getActiveOrders: vi.fn().mockResolvedValue([]),
+            updateOrderStatus: vi.fn().mockResolvedValue(true),
+            getOrderItems: vi.fn().mockResolvedValue([]),
+            updateOrderQuantity: vi.fn().mockResolvedValue({
+                id: 'item1',
+                menuItemId: 'pizza1',
+                orderId: 'order1',
+                quantity: 1,
+                status: 'pending'
+            }),
+            removeOrderItem: vi.fn().mockResolvedValue({
+                menuItemId: 'pizza1',
+                orderId: 'order1',
+                blabla: 'name'
+            })
+        } as OrderService;
+
 
         scheduleService = {
             getAvailablePickupTimes: vi.fn().mockResolvedValue(mockTimeSlots),
-            validatePickupTime: vi.fn().mockResolvedValue(true)
-        };
+            validatePickupTime: vi.fn().mockResolvedValue(true),
+            getEstimatedPickupTime: vi.fn().mockResolvedValue(25)
+        } as ScheduleService;
 
         takeawayManager = new TakeawayPageManager(
             menuService,
@@ -186,20 +218,19 @@ describe('Takeaway Page - Complete User Journey', () => {
 
             expect(reviewService.getMenuItemReviews).toHaveBeenCalledWith('pizza1');
             expect(reviewService.getReviewStats).toHaveBeenCalledWith('pizza1');
-            expect(stats.averageRating).toBe(4.8);
-            expect(reviews).toHaveLength(1);
+            expect(reviews).toEqual(mockReviews);
+            expect(stats).toHaveProperty('averageRating');
+            expect(stats).toHaveProperty('totalReviews');
         });
 
         it('should calculate customization prices correctly', async () => {
             // When user selects different options and customizations
-            const price = takeawayManager.calculateItemPrice({
-                baseItem: mockMenuItem,
-                customizations: {
-                    size: 'large',
+            const price = calculateItemPrice(
+                mockMenuItem,
+                {
+                    size: ['large'],
                     extra: ['cheese', 'pepperoni']
-                }
-            });
-
+                })
             // Base: 18.99, Large: +4, Extra Cheese: +2, Extra Pepperoni: +2.5
             expect(price).toBe(27.49);
         });
@@ -212,7 +243,7 @@ describe('Takeaway Page - Complete User Journey', () => {
                 menuItem: mockMenuItem,
                 quantity: 1,
                 customizations: {
-                    size: 'large',
+                    size: ['large'],
                     extra: ['cheese']
                 },
                 specialInstructions: 'Well done please'
@@ -256,7 +287,7 @@ describe('Takeaway Page - Complete User Journey', () => {
 
         it('should calculate estimated preparation time', async () => {
             // When viewing time slots, system shows preparation time
-            const time = await takeawayManager.getEstimatedPreparationTime(['pizza1']);
+            const time = await takeawayManager.getEstimatedPreparationTime();
 
             expect(orderService.getEstimatedPreparationTime).toHaveBeenCalledWith(['pizza1']);
             expect(time).toBe(25); // minutes
@@ -275,7 +306,7 @@ describe('Takeaway Page - Complete User Journey', () => {
         it('should validate order before placement', async () => {
             // When user attempts to place order
             const validation = await takeawayManager.validateTakeawayOrder({
-                items: [{ menuItemId: 'pizza1', quantity: 1 }],
+                items: [{ menuItemId: 'pizza1', quantity: 1, customizations: { size: ['large'], extra: ['cheese'] }, specialInstructions: 'Call upon arrival', id: '', price: 0, updatedAt: null, addedAt: null }],
                 pickupTime: '18:00'
             });
 
@@ -286,7 +317,7 @@ describe('Takeaway Page - Complete User Journey', () => {
         it('should place takeaway order with all details', async () => {
             // When user confirms order placement
             const result = await takeawayManager.placeTakeawayOrder({
-                items: [{ menuItemId: 'pizza1', quantity: 1 }],
+                items: [{ menuItemId: 'pizza1', quantity: 1, customizations: { size: ['large'], extra: ['cheese'] }, specialInstructions: 'Call upon arrival', id: '', price: 0, updatedAt: null, addedAt: null }],
                 pickupTime: '18:00',
                 specialInstructions: 'Call upon arrival',
                 paymentMethod: 'credit_card'

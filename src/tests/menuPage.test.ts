@@ -17,6 +17,8 @@ describe('Menu Page - User Orders Food in Restaurant', () => {
     let qrCodeService;
     let userService;
     let groupOrderService;
+    let scheduleService;
+    let reviewService;
 
     // Mock Data
     const mockUser: User = {
@@ -147,7 +149,9 @@ describe('Menu Page - User Orders Food in Restaurant', () => {
             tableService,
             qrCodeService,
             groupOrderService,
-            userService
+            userService,
+            scheduleService,
+            reviewService
         );
     });
     describe('1. Initial Page Load and QR Code Scanning', () => {

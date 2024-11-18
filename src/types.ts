@@ -79,6 +79,8 @@ export interface OrderSummary {
     appliedDiscounts?: PromotionUsage[];
     tax: number;
     serviceCharge?: number;
+    subtotal: number;
+    total: number;
 }
 
 // Time Slot Management
