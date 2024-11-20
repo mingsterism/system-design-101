@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es2022", // or "esnext" for the latest features
+    "module": "NodeNext", // for Node.js applications
+    "lib": ["dom", "esnext"], // include necessary libraries
+    "strict": true, // enable all strict type-checking options
+    "esModuleInterop": true, // allow default imports from CommonJS modules
+    "skipLibCheck": true, // skip type checking of declaration files for faster builds
+    "forceConsistentCasingInFileNames": true, // prevent issues with case sensitivity
+    "resolveJsonModule": true, // allow importing JSON files as modules
+    "incremental": true, // enable incremental compilation for faster builds
+    "outDir": "./dist", // output directory for compiled files
+    "sourceMap": true // generate source maps for debugging
+  },
+  "include": ["src/**/*"], // specify the files to include in the compilation
+  "exclude": ["node_modules", "**/*.spec.ts"] // exclude test files and node_modules
+}

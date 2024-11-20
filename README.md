@@ -22,6 +22,13 @@ orderItem - confirmed - completed
 
 # Description
 
+# Classes
+these are things where it's long lived and it will have it's own state. encapsulating it's own state is critical. 
+the only way to communicate with that state is to go through the methods of that object. 
+however, the premise of functional is that the methods will always read from just the arguments that are passed in. 
+how can we reconcile these two things?
+
+
 A comprehensive restaurant management system that enables:
 
 - In-store dining with QR code-based ordering
@@ -393,3 +400,29 @@ A comprehensive restaurant management system that enables:
 - Manage staff
 - Configure system settings
 - View analytics
+
+
+
+# Core logic
+At the interface level we design all the stakeholder functions that they will do. 
+The these stakeholder functions will only work with specific objects. all the functions
+used in these stakeholder functions will be functional stateless functions. 
+these interfaces will be used in actual classes. 
+
+what if we made the classes as the objects instead. the fundamental idea is that the functions
+will mutate the objects. 
+
+for the stakeholders, they shall have their own functions as well that is just unique to them. 
+the concept of state is that methods work around the objects. 
+
+menuPage
+1. addItemToCart. when the user adds an item to cart, then the local state is updated. when 
+adding item to cart, there can be function that handles cart local storage. so it will need to pass
+in a local storage object and the function will just save everything to localstorage in that method. 
+2. confirmItems. the user confirms all the items they can pass in their items. then it will 
+save to the database. can we abstract out the user functions from the classes. and put classes around objects
+instead. or perhaps users and objects will have their own methods. Users will accept in objects as input. 
+the user can do actions which will be called on the main page. but within the user functions, the object methods
+are being used to directly update the object state itself. For example: user update cart, user confirm order, 
+admin update menuItem. when updating menuItem, it will be this.menuItem.update(menuItem). the menuItem will 
+have it's own methods that allow to communicate and mutate it. but for querying data, we can use general query functions
